@@ -49,7 +49,7 @@ export function registerVariableTools(server: McpServer): void {
       try {
         const result = await sendCommandToFigma("create_variable_collection", {
           name,
-        });
+        }, 120000);
         const typedResult = result as {
           id: string;
           name: string;
@@ -111,7 +111,7 @@ export function registerVariableTools(server: McpServer): void {
           resolvedType,
           value,
           modeId,
-        });
+        }, 120000);
         const typedResult = result as {
           id: string;
           name: string;
@@ -150,7 +150,7 @@ export function registerVariableTools(server: McpServer): void {
       try {
         const result = await sendCommandToFigma("get_variable_by_id", {
           variableId,
-        });
+        }, 120000);
         return {
           content: [
             {
@@ -179,7 +179,7 @@ export function registerVariableTools(server: McpServer): void {
     {},
     async () => {
       try {
-        const result = await sendCommandToFigma("get_local_variable_collections", {});
+        const result = await sendCommandToFigma("get_local_variable_collections", {}, 120000);
         const typedResult = result as Array<{
           id: string;
           name: string;
@@ -219,7 +219,7 @@ export function registerVariableTools(server: McpServer): void {
       try {
         const result = await sendCommandToFigma("get_local_variables", {
           collectionId,
-        });
+        }, 120000);
         const typedResult = result as Array<{
           id: string;
           name: string;
@@ -402,7 +402,7 @@ export function registerVariableTools(server: McpServer): void {
           nodeId,
           field,
           variableId,
-        });
+        }, 120000);
         const typedResult = result as { success: boolean; nodeId: string; field: string };
         return {
           content: [
