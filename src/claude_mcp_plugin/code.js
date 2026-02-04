@@ -6419,7 +6419,7 @@ async function getVariableById(params) {
 
 // Get all local variable collections
 async function getLocalVariableCollections() {
-  const collections = figma.variables.getLocalVariableCollections();
+  const collections = await figma.variables.getLocalVariableCollectionsAsync();
 
   return collections.map(collection => ({
     id: collection.id,
@@ -6438,7 +6438,7 @@ async function getLocalVariableCollections() {
 async function getLocalVariables(params) {
   const { collectionId } = params || {};
 
-  const variables = figma.variables.getLocalVariables();
+  const variables = await figma.variables.getLocalVariablesAsync();
 
   const filteredVariables = collectionId
     ? variables.filter(v => v.variableCollectionId === collectionId)
