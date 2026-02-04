@@ -7,6 +7,7 @@ import { registerComponentTools } from "./component-tools";
 import { registerImageTools } from "./image-tools";
 import { registerSvgTools } from "./svg-tools";
 import { registerVariableTools } from "./variable-tools";
+import { registerStyleTools } from "./style-tools";
 import { registerFigJamTools } from "./figjam-tools";
 
 /**
@@ -23,6 +24,7 @@ export function registerTools(server: McpServer): void {
   registerImageTools(server);
   registerSvgTools(server);
   registerVariableTools(server);
+  registerStyleTools(server);
   registerFigJamTools(server);
 }
 
@@ -36,5 +38,6 @@ export {
   registerImageTools,
   registerSvgTools,
   registerVariableTools,
+  registerStyleTools,
   registerFigJamTools,
 };
