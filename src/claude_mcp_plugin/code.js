@@ -300,6 +300,19 @@ async function handleCommand(command, params) {
       return await applyVariableToNode(params);
     case "switch_variable_mode":
       return await switchVariableMode(params);
+    // Variable system commands (P1)
+    case "create_variable_collection":
+      return await createVariableCollection(params);
+    case "create_variable":
+      return await createVariable(params);
+    case "get_variable_by_id":
+      return await getVariableById(params);
+    case "get_local_variable_collections":
+      return await getLocalVariableCollections();
+    case "get_local_variables":
+      return await getLocalVariables(params);
+    case "set_bound_variable":
+      return await setBoundVariable(params);
     // ── FigJam commands ──────────────────────────────────────────────────
     case "get_figjam_elements":
       return await getFigJamElements();
@@ -323,6 +336,8 @@ async function handleCommand(command, params) {
       return await createTextStyle(params);
     case "create_paint_style":
       return await createPaintStyle(params);
+    case "set_fill_style_id":
+      return await setFillStyleId(params);
     case "create_effect_style":
       return await createEffectStyle(params);
     default:
@@ -6149,9 +6164,12 @@ async function detachInstance(params) {
 async function createTextStyle(params) {
   const {
     name,
-    fontFamily,
+    fontFamily = "Inter",
     fontStyle = "Regular",
-    fontSize,
+    fontSize = 16,
+    lineHeightPx,
+    letterSpacingPx,
+    description,
     letterSpacing,
     letterSpacingUnit = "PIXELS",
     lineHeight,
@@ -6160,23 +6178,38 @@ async function createTextStyle(params) {
     textDecoration = "NONE",
   } = params || {};
 
+  if (!name) {
+    throw new Error("Missing name parameter");
+  }
+
   const style = figma.createTextStyle();
   style.name = name;
+  if (description !== undefined) {
+    style.description = description;
+  }
 
   // Load and apply font
   await figma.loadFontAsync({ family: fontFamily, style: fontStyle });
   style.fontName = { family: fontFamily, style: fontStyle };
   style.fontSize = fontSize;
 
-  if (letterSpacing !== undefined) {
-    style.letterSpacing = { value: letterSpacing, unit: letterSpacingUnit };
+  const resolvedLetterSpacing = letterSpacing !== undefined ? letterSpacing : letterSpacingPx;
+  if (resolvedLetterSpacing !== undefined) {
+    style.letterSpacing = {
+      value: resolvedLetterSpacing,
+      unit: letterSpacing !== undefined ? letterSpacingUnit : "PIXELS",
+    };
   }
 
-  if (lineHeight !== undefined) {
+  const resolvedLineHeight = lineHeight !== undefined ? lineHeight : lineHeightPx;
+  if (resolvedLineHeight !== undefined || lineHeightUnit === "AUTO") {
     if (lineHeightUnit === "AUTO") {
       style.lineHeight = { unit: "AUTO" };
     } else {
-      style.lineHeight = { value: lineHeight, unit: lineHeightUnit };
+      style.lineHeight = {
+        value: resolvedLineHeight,
+        unit: lineHeight !== undefined ? lineHeightUnit : "PIXELS",
+      };
     }
   }
 
@@ -6190,19 +6223,71 @@ async function createTextStyle(params) {
  * Create a reusable solid paint style in Figma
  */
 async function createPaintStyle(params) {
-  const { name, r, g, b, a = 1 } = params || {};
+  const { name, color, r, g, b, a = 1, description } = params || {};
+
+  if (!name) {
+    throw new Error("Missing name parameter");
+  }
+
+  const paintColor = color || { r, g, b, a };
+  if (!paintColor || paintColor.r === undefined || paintColor.g === undefined || paintColor.b === undefined) {
+    throw new Error("Color must include r, g, and b components");
+  }
 
   const style = figma.createPaintStyle();
   style.name = name;
+  if (description !== undefined) {
+    style.description = description;
+  }
   style.paints = [
     {
       type: "SOLID",
-      color: { r, g, b },
-      opacity: a,
+      color: { r: paintColor.r, g: paintColor.g, b: paintColor.b },
+      opacity: paintColor.a !== undefined ? paintColor.a : a,
     },
   ];
 
-  return { id: style.id, name: style.name, key: style.key };
+  return { id: style.id, name: style.name, key: style.key, paint: style.paints[0] };
+}
+
+// Set Fill Style ID Tool
+async function setFillStyleId(params) {
+  const { nodeId, fillStyleId } = params || {};
+
+  if (!nodeId) {
+    throw new Error("Missing nodeId parameter");
+  }
+
+  if (!fillStyleId) {
+    throw new Error("Missing fillStyleId parameter");
+  }
+
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) {
+    throw new Error(`Node not found with ID: ${nodeId}`);
+  }
+
+  if (!("fillStyleId" in node)) {
+    throw new Error(`Node with ID ${nodeId} does not support fill styles`);
+  }
+
+  const paintStyles = await figma.getLocalPaintStylesAsync();
+  const foundStyle = paintStyles.find(
+    (style) => style.id === fillStyleId || style.key === fillStyleId
+  );
+
+  if (!foundStyle) {
+    throw new Error(`Paint style with ID "${fillStyleId}" not found. Make sure the style exists in your local styles.`);
+  }
+
+  node.fillStyleId = foundStyle.id;
+
+  return {
+    id: node.id,
+    name: node.name,
+    fillStyleId: node.fillStyleId,
+    styleName: foundStyle.name,
+  };
 }
 
 /**
@@ -6234,3 +6319,215 @@ async function createEffectStyle(params) {
   };
 }
 
+// ============================================
+// Variable System Functions (P1 - Design Tokens)
+// ============================================
+
+async function createVariableCollection(params) {
+  const { name } = params || {};
+
+  if (!name) {
+    throw new Error("Missing name parameter");
+  }
+
+  const collection = figma.variables.createVariableCollection(name);
+
+  return {
+    id: collection.id,
+    name: collection.name,
+    modes: collection.modes.map(mode => ({
+      modeId: mode.modeId,
+      name: mode.name
+    })),
+    defaultModeId: collection.defaultModeId
+  };
+}
+
+// Create a new variable in a collection
+async function createVariable(params) {
+  const { name, collectionId, resolvedType, value, modeId } = params || {};
+
+  if (!name) {
+    throw new Error("Missing name parameter");
+  }
+  if (!collectionId) {
+    throw new Error("Missing collectionId parameter");
+  }
+  if (!resolvedType) {
+    throw new Error("Missing resolvedType parameter");
+  }
+
+  const validTypes = ["BOOLEAN", "COLOR", "FLOAT", "STRING"];
+  if (!validTypes.includes(resolvedType)) {
+    throw new Error(`Invalid resolvedType: ${resolvedType}. Must be one of: ${validTypes.join(", ")}`);
+  }
+
+  const variable = figma.variables.createVariable(name, collectionId, resolvedType);
+
+  // Set initial value if provided
+  if (value !== undefined) {
+    const collection = figma.variables.getVariableCollectionById(collectionId);
+    const targetModeId = modeId || collection.defaultModeId;
+
+    let processedValue = value;
+
+    // For COLOR type, ensure proper format
+    if (resolvedType === "COLOR" && typeof value === "object") {
+      processedValue = {
+        r: value.r,
+        g: value.g,
+        b: value.b,
+        a: value.a !== undefined ? value.a : 1
+      };
+    }
+
+    variable.setValueForMode(targetModeId, processedValue);
+  }
+
+  return {
+    id: variable.id,
+    name: variable.name,
+    resolvedType: variable.resolvedType,
+    collectionId: variable.variableCollectionId
+  };
+}
+
+// Get a variable by its ID
+async function getVariableById(params) {
+  const { variableId } = params || {};
+
+  if (!variableId) {
+    throw new Error("Missing variableId parameter");
+  }
+
+  const variable = figma.variables.getVariableById(variableId);
+
+  if (!variable) {
+    throw new Error(`Variable not found with ID: ${variableId}`);
+  }
+
+  return {
+    id: variable.id,
+    name: variable.name,
+    resolvedType: variable.resolvedType,
+    collectionId: variable.variableCollectionId,
+    valuesByMode: variable.valuesByMode,
+    scopes: variable.scopes,
+    hiddenFromPublishing: variable.hiddenFromPublishing
+  };
+}
+
+// Get all local variable collections
+async function getLocalVariableCollections() {
+  const collections = figma.variables.getLocalVariableCollections();
+
+  return collections.map(collection => ({
+    id: collection.id,
+    name: collection.name,
+    modes: collection.modes.map(mode => ({
+      modeId: mode.modeId,
+      name: mode.name
+    })),
+    defaultModeId: collection.defaultModeId,
+    variableIds: collection.variableIds,
+    hiddenFromPublishing: collection.hiddenFromPublishing
+  }));
+}
+
+// Get all local variables, optionally filtered by collection
+async function getLocalVariables(params) {
+  const { collectionId } = params || {};
+
+  const variables = figma.variables.getLocalVariables();
+
+  const filteredVariables = collectionId
+    ? variables.filter(v => v.variableCollectionId === collectionId)
+    : variables;
+
+  return filteredVariables.map(variable => ({
+    id: variable.id,
+    name: variable.name,
+    resolvedType: variable.resolvedType,
+    collectionId: variable.variableCollectionId,
+    valuesByMode: variable.valuesByMode,
+    scopes: variable.scopes
+  }));
+}
+
+// Bind a variable to a node property
+async function setBoundVariable(params) {
+  const { nodeId, field, variableId } = params || {};
+
+  if (!nodeId) {
+    throw new Error("Missing nodeId parameter");
+  }
+  if (!field) {
+    throw new Error("Missing field parameter");
+  }
+  if (!variableId) {
+    throw new Error("Missing variableId parameter");
+  }
+
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) {
+    throw new Error(`Node not found with ID: ${nodeId}`);
+  }
+
+  const variable = figma.variables.getVariableById(variableId);
+  if (!variable) {
+    throw new Error(`Variable not found with ID: ${variableId}`);
+  }
+
+  // Map field names to Figma's expected format
+  const fieldMapping = {
+    "fill": "fills",
+    "stroke": "strokes",
+    "opacity": "opacity",
+    "width": "width",
+    "height": "height",
+    "paddingTop": "paddingTop",
+    "paddingRight": "paddingRight",
+    "paddingBottom": "paddingBottom",
+    "paddingLeft": "paddingLeft",
+    "itemSpacing": "itemSpacing",
+    "counterAxisSpacing": "counterAxisSpacing",
+    "cornerRadius": "cornerRadius",
+    "topLeftRadius": "topLeftRadius",
+    "topRightRadius": "topRightRadius",
+    "bottomLeftRadius": "bottomLeftRadius",
+    "bottomRightRadius": "bottomRightRadius"
+  };
+
+  const figmaField = fieldMapping[field] || field;
+
+  // Check if the node supports setBoundVariable
+  if (typeof node.setBoundVariable !== "function") {
+    throw new Error(`Node type ${node.type} does not support variable binding`);
+  }
+
+  // For fill and stroke, we need to handle the paint array
+  if (field === "fill" || field === "stroke") {
+    const paintProperty = field === "fill" ? "fills" : "strokes";
+    const paints = node[paintProperty];
+
+    if (!paints || paints.length === 0) {
+      // Create a default solid paint if none exists
+      const defaultPaint = {
+        type: "SOLID",
+        color: { r: 0, g: 0, b: 0 }
+      };
+      node[paintProperty] = [defaultPaint];
+    }
+
+    // Bind to the first paint's color
+    node.setBoundVariable(figmaField, variable, 0);
+  } else {
+    node.setBoundVariable(figmaField, variable);
+  }
+
+  return {
+    success: true,
+    nodeId: node.id,
+    field: field
+  };
+}

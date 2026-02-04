@@ -4,58 +4,109 @@ import { sendCommandToFigma } from "../utils/websocket";
 import { coerceJson } from "../utils/schema-helpers";
 
 /**
- * Register style creation tools to the MCP server
- * This module contains tools for creating reusable styles in Figma
- * @param server - The MCP server instance
+ * Register style-related tools to the MCP server.
+ * This module covers local paint/text/effect style creation and style application.
  */
 export function registerStyleTools(server: McpServer): void {
+  // Create Paint Style Tool
+  server.tool(
+    "create_paint_style",
+    "Create a local paint style (solid color) in Figma",
+    {
+      name: z.string().min(1).describe("Name of the paint style"),
+      r: z.number().min(0).max(1).describe("Red component (0-1)"),
+      g: z.number().min(0).max(1).describe("Green component (0-1)"),
+      b: z.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: z.number().min(0).max(1).optional().describe("Alpha/opacity (0-1, defaults to 1)"),
+      description: z.string().optional().describe("Optional style description"),
+    },
+    async ({ name, r, g, b, a, description }) => {
+      try {
+        const result = await sendCommandToFigma("create_paint_style", {
+          name,
+          color: { r, g, b, a: a ?? 1 },
+          description,
+        });
+        const typedResult = result as { id: string; name: string; key: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Created paint style "${typedResult.name}" (${typedResult.id})`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error creating paint style: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Create Text Style Tool
   server.tool(
     "create_text_style",
-    "Create a reusable text style (typography) in Figma's local styles. This is useful for design system consistency.",
+    "Create a local text style in Figma",
     {
-      name: z.string().describe("Name for the style (e.g., 'Heading/H1' or 'Body/Large')"),
-      fontFamily: z.string().describe("Font family name (e.g., 'Inter', 'Roboto')"),
-      fontStyle: z.string().optional().describe("Font style (e.g., 'Regular', 'Bold', 'Italic'). Defaults to 'Regular'."),
-      fontSize: z.number().positive().describe("Font size in pixels"),
-      letterSpacing: z.number().optional().describe("Letter spacing value (defaults to 0)"),
-      letterSpacingUnit: z.enum(["PIXELS", "PERCENT"]).optional().describe("Letter spacing unit (PIXELS or PERCENT, defaults to PIXELS)"),
-      lineHeight: z.number().optional().describe("Line height value"),
-      lineHeightUnit: z.enum(["PIXELS", "PERCENT", "AUTO"]).optional().describe("Line height unit (PIXELS, PERCENT, or AUTO, defaults to AUTO if no value provided)"),
+      name: z.string().min(1).describe("Name of the text style"),
+      fontFamily: z.string().optional().describe("Font family (default: Inter)"),
+      fontStyle: z.string().optional().describe("Font style (default: Regular)"),
+      fontSize: z.number().positive().optional().describe("Font size in px (default: 16)"),
+      lineHeightPx: z.number().positive().optional().describe("Line height in px"),
+      letterSpacingPx: z.number().optional().describe("Letter spacing in px"),
+      description: z.string().optional().describe("Optional style description"),
+      lineHeight: z.number().optional().describe("Legacy line height value"),
+      lineHeightUnit: z.enum(["PIXELS", "PERCENT", "AUTO"]).optional().describe("Legacy line height unit"),
+      letterSpacing: z.number().optional().describe("Legacy letter spacing value"),
+      letterSpacingUnit: z.enum(["PIXELS", "PERCENT"]).optional().describe("Legacy letter spacing unit"),
       textCase: z.enum(["ORIGINAL", "UPPER", "LOWER", "TITLE"]).optional().describe("Text case transformation"),
       textDecoration: z.enum(["NONE", "UNDERLINE", "STRIKETHROUGH"]).optional().describe("Text decoration type"),
     },
     async ({
       name,
       fontFamily,
-      fontStyle = "Regular",
+      fontStyle,
       fontSize,
-      letterSpacing = 0,
-      letterSpacingUnit = "PIXELS",
+      lineHeightPx,
+      letterSpacingPx,
+      description,
       lineHeight,
-      lineHeightUnit = "AUTO",
-      textCase = "ORIGINAL",
-      textDecoration = "NONE",
+      lineHeightUnit,
+      letterSpacing,
+      letterSpacingUnit,
+      textCase,
+      textDecoration,
     }) => {
       try {
-        const result = await sendCommandToFigma("create_text_style", {
+        const payload: Record<string, unknown> = {
           name,
           fontFamily,
           fontStyle,
           fontSize,
-          letterSpacing,
-          letterSpacingUnit,
-          lineHeight,
-          lineHeightUnit: lineHeight === undefined ? "AUTO" : lineHeightUnit,
-          textCase,
-          textDecoration,
-        });
+          lineHeightPx,
+          letterSpacingPx,
+          description,
+        };
+        if (lineHeight !== undefined) payload.lineHeight = lineHeight;
+        if (lineHeightUnit !== undefined) payload.lineHeightUnit = lineHeightUnit;
+        if (letterSpacing !== undefined) payload.letterSpacing = letterSpacing;
+        if (letterSpacingUnit !== undefined) payload.letterSpacingUnit = letterSpacingUnit;
+        if (textCase !== undefined) payload.textCase = textCase;
+        if (textDecoration !== undefined) payload.textDecoration = textDecoration;
 
+        const result = await sendCommandToFigma("create_text_style", payload);
         const typedResult = result as { id: string; name: string; key: string };
         return {
           content: [
             {
               type: "text",
-              text: `✅ Created text style "${typedResult.name}"\nID: ${typedResult.id}\nKey: ${typedResult.key}`,
+              text: `Created text style "${typedResult.name}" (${typedResult.id})`,
             },
           ],
         };
@@ -64,41 +115,34 @@ export function registerStyleTools(server: McpServer): void {
           content: [
             {
               type: "text",
-              text: `❌ Error creating text style: ${error instanceof Error ? error.message : String(error)}`,
+              text: `Error creating text style: ${error instanceof Error ? error.message : String(error)}`,
             },
           ],
-          isError: true,
         };
       }
     }
   );
 
+  // Set Fill Style ID Tool
   server.tool(
-    "create_paint_style",
-    "Create a reusable color/paint style (SOLID) in Figma's local styles.",
+    "set_fill_style_id",
+    "Apply a paint style to a node's fill in Figma",
     {
-      name: z.string().describe("Name for the style (e.g., 'Brand/Primary' or 'UI/Background')"),
-      r: z.number().min(0).max(1).describe("Red component (0-1)"),
-      g: z.number().min(0).max(1).describe("Green component (0-1)"),
-      b: z.number().min(0).max(1).describe("Blue component (0-1)"),
-      a: z.number().min(0).max(1).optional().describe("Alpha/opacity (0-1, default 1)"),
+      nodeId: z.string().describe("ID of the node to modify"),
+      fillStyleId: z.string().describe("Paint style ID (or key) to apply"),
     },
-    async ({ name, r, g, b, a = 1 }) => {
+    async ({ nodeId, fillStyleId }) => {
       try {
-        const result = await sendCommandToFigma("create_paint_style", {
-          name,
-          r,
-          g,
-          b,
-          a,
+        const result = await sendCommandToFigma("set_fill_style_id", {
+          nodeId,
+          fillStyleId,
         });
-
-        const typedResult = result as { id: string; name: string; key: string };
+        const typedResult = result as { name: string; styleName: string };
         return {
           content: [
             {
               type: "text",
-              text: `✅ Created paint style "${typedResult.name}"\nID: ${typedResult.id}\nKey: ${typedResult.key}`,
+              text: `Applied fill style "${typedResult.styleName}" to node "${typedResult.name}"`,
             },
           ],
         };
@@ -107,15 +151,15 @@ export function registerStyleTools(server: McpServer): void {
           content: [
             {
               type: "text",
-              text: `❌ Error creating paint style: ${error instanceof Error ? error.message : String(error)}`,
+              text: `Error setting fill style: ${error instanceof Error ? error.message : String(error)}`,
             },
           ],
-          isError: true,
         };
       }
     }
   );
 
+  // Create Effect Style Tool
   server.tool(
     "create_effect_style",
     "Create a reusable effect style (shadows, blurs) in Figma's local styles.",
@@ -161,7 +205,7 @@ export function registerStyleTools(server: McpServer): void {
           content: [
             {
               type: "text",
-              text: `✅ Created effect style "${typedResult.name}" with ${typedResult.effectCount} effect(s)\nID: ${typedResult.id}\nKey: ${typedResult.key}`,
+              text: `Created effect style "${typedResult.name}" with ${typedResult.effectCount} effect(s) (ID: ${typedResult.id}, key: ${typedResult.key})`,
             },
           ],
         };
@@ -170,10 +214,9 @@ export function registerStyleTools(server: McpServer): void {
           content: [
             {
               type: "text",
-              text: `❌ Error creating effect style: ${error instanceof Error ? error.message : String(error)}`,
+              text: `Error creating effect style: ${error instanceof Error ? error.message : String(error)}`,
             },
           ],
-          isError: true,
         };
       }
     }

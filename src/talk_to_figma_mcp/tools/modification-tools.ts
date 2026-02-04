@@ -537,6 +537,172 @@ export function registerModificationTools(server: McpServer): void {
     }
   );
 
+  // Set Locked Tool
+  server.tool(
+    "set_locked",
+    "Set the locked state of a node in Figma",
+    {
+      nodeId: z.string().describe("The ID of the node to modify"),
+      locked: coerceBoolean.describe("Whether the node should be locked"),
+    },
+    async ({ nodeId, locked }) => {
+      try {
+        const result = await sendCommandToFigma("set_locked", { nodeId, locked });
+        const typedResult = result as { name: string; locked: boolean };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Set locked state of node "${typedResult.name}" to ${typedResult.locked}`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting locked state: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Set Visible Tool
+  server.tool(
+    "set_visible",
+    "Set the visibility of a node in Figma",
+    {
+      nodeId: z.string().describe("The ID of the node to modify"),
+      visible: coerceBoolean.describe("Whether the node should be visible"),
+    },
+    async ({ nodeId, visible }) => {
+      try {
+        const result = await sendCommandToFigma("set_visible", { nodeId, visible });
+        const typedResult = result as { name: string; visible: boolean };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Set visibility of node "${typedResult.name}" to ${typedResult.visible}`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting visibility: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Align Nodes Tool
+  server.tool(
+    "align_nodes",
+    "Align multiple nodes in Figma",
+    {
+      nodeIds: coerceJson(z.array(z.string()).min(2)).describe("Node IDs to align"),
+      alignment: z.enum(["left", "center", "right", "top", "middle", "bottom"]).describe("Alignment direction"),
+    },
+    async ({ nodeIds, alignment }) => {
+      try {
+        const result = await sendCommandToFigma("align_nodes", { nodeIds, alignment });
+        const typedResult = result as { alignedCount?: number; alignment?: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Aligned ${typedResult.alignedCount ?? nodeIds.length} node(s) ${typedResult.alignment ?? alignment}`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error aligning nodes: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Distribute Nodes Tool
+  server.tool(
+    "distribute_nodes",
+    "Distribute three or more nodes in Figma",
+    {
+      nodeIds: coerceJson(z.array(z.string()).min(3)).describe("Node IDs to distribute"),
+      direction: z.enum(["horizontal", "vertical"]).describe("Distribution direction"),
+      spacing: z.coerce.number().optional().describe("Optional fixed spacing between nodes"),
+    },
+    async ({ nodeIds, direction, spacing }) => {
+      try {
+        const result = await sendCommandToFigma("distribute_nodes", { nodeIds, direction, spacing });
+        const typedResult = result as { distributedCount?: number; direction?: string; spacing?: number };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Distributed ${typedResult.distributedCount ?? nodeIds.length} node(s) ${typedResult.direction ?? direction}`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error distributing nodes: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Set Blend Mode Tool
+  server.tool(
+    "set_blend_mode",
+    "Set a node blend mode in Figma",
+    {
+      nodeId: z.string().describe("The ID of the node to modify"),
+      blendMode: z.string().describe("Figma blend mode, e.g. NORMAL or MULTIPLY"),
+    },
+    async ({ nodeId, blendMode }) => {
+      try {
+        const result = await sendCommandToFigma("set_blend_mode", { nodeId, blendMode });
+        const typedResult = result as { name: string; blendMode: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Set blend mode of node "${typedResult.name}" to ${typedResult.blendMode ?? blendMode}`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting blend mode: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
   // Reorder Node Tool (z-order within same parent)
   server.tool(
     "reorder_node",
@@ -600,6 +766,50 @@ export function registerModificationTools(server: McpServer): void {
             {
               type: "text",
               text: `Error converting to frame: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Set Gradient Fill Tool
+  server.tool(
+    "set_gradient_fill",
+    "Set a gradient fill on a node in Figma",
+    {
+      nodeId: z.string().describe("The ID of the node to modify"),
+      gradientType: z.enum(["GRADIENT_LINEAR", "GRADIENT_RADIAL", "GRADIENT_ANGULAR", "GRADIENT_DIAMOND"]).describe("Gradient type"),
+      stops: coerceJson(z.array(z.object({
+        position: z.coerce.number().min(0).max(1).describe("Stop position (0-1)"),
+        r: z.coerce.number().min(0).max(1).describe("Red component (0-1)"),
+        g: z.coerce.number().min(0).max(1).describe("Green component (0-1)"),
+        b: z.coerce.number().min(0).max(1).describe("Blue component (0-1)"),
+        a: z.coerce.number().min(0).max(1).optional().describe("Alpha component (0-1)"),
+      })).min(2)).describe("Array of gradient color stops"),
+    },
+    async ({ nodeId, gradientType, stops }) => {
+      try {
+        const result = await sendCommandToFigma("set_gradient_fill", {
+          nodeId,
+          gradientType,
+          stops,
+        });
+        const typedResult = result as { name: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Applied ${gradientType} gradient with ${stops.length} stops to node "${typedResult.name}"`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting gradient fill: ${error instanceof Error ? error.message : String(error)}`,
             },
           ],
         };

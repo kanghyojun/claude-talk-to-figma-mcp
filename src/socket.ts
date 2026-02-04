@@ -1,4 +1,4 @@
-import { Server, ServerWebSocket } from "bun";
+import { ServerWebSocket } from "bun";
 
 // Enhanced logging system
 const logger = {
@@ -510,7 +510,7 @@ const server = Bun.serve({
   port: 3055,
   // uncomment this to allow connections in windows wsl
   // hostname: "0.0.0.0",
-  fetch(req: Request, server: Server) {
+  fetch(req: Request, server) {
     const url = new URL(req.url);
 
     logger.debug(`Received ${req.method} request to ${url.pathname}`);
