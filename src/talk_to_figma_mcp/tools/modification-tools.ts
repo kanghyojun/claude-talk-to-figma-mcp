@@ -406,6 +406,279 @@ export function registerModificationTools(server: McpServer): void {
     }
   );
 
+  // Set Locked Tool
+  server.tool(
+    "set_locked",
+    "Lock or unlock a node in Figma",
+    {
+      nodeId: z.string().describe("The ID of the node to update"),
+      locked: z.boolean().describe("Whether the node should be locked"),
+    },
+    async ({ nodeId, locked }) => {
+      try {
+        const result = await sendCommandToFigma("set_locked", { nodeId, locked });
+        const typedResult = result as { name: string; locked: boolean };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `${typedResult.locked ? "Locked" : "Unlocked"} node "${typedResult.name}"`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting lock state: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Set Visible Tool
+  server.tool(
+    "set_visible",
+    "Show or hide a node in Figma",
+    {
+      nodeId: z.string().describe("The ID of the node to update"),
+      visible: z.boolean().describe("Whether the node should be visible"),
+    },
+    async ({ nodeId, visible }) => {
+      try {
+        const result = await sendCommandToFigma("set_visible", { nodeId, visible });
+        const typedResult = result as { name: string; visible: boolean };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `${typedResult.visible ? "Showed" : "Hid"} node "${typedResult.name}"`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting visibility: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Reorder Node Tool
+  server.tool(
+    "reorder_node",
+    "Change the layer order of a node in its parent",
+    {
+      nodeId: z.string().describe("The ID of the node to reorder"),
+      newIndex: z.number().int().min(0).describe("New index in the parent children list"),
+    },
+    async ({ nodeId, newIndex }) => {
+      try {
+        const result = await sendCommandToFigma("reorder_node", { nodeId, newIndex });
+        const typedResult = result as { name: string; newIndex: number };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Moved node "${typedResult.name}" to layer index ${typedResult.newIndex}`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error reordering node: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Align Nodes Tool
+  server.tool(
+    "align_nodes",
+    "Align multiple nodes (left, center, right, top, middle, bottom)",
+    {
+      nodeIds: z.array(z.string()).min(2).describe("Node IDs to align"),
+      alignment: z.enum(["left", "center", "right", "top", "middle", "bottom"]).describe("Alignment mode"),
+    },
+    async ({ nodeIds, alignment }) => {
+      try {
+        const result = await sendCommandToFigma("align_nodes", { nodeIds, alignment });
+        const typedResult = result as { alignedCount: number; alignment: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Aligned ${typedResult.alignedCount} node(s) using "${typedResult.alignment}"`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error aligning nodes: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Distribute Nodes Tool
+  server.tool(
+    "distribute_nodes",
+    "Distribute multiple nodes with equal spacing horizontally or vertically",
+    {
+      nodeIds: z.array(z.string()).min(3).describe("Node IDs to distribute"),
+      direction: z.enum(["horizontal", "vertical"]).describe("Distribution direction"),
+      spacing: z.number().optional().describe("Optional fixed spacing in px (auto-calculated if omitted)"),
+    },
+    async ({ nodeIds, direction, spacing }) => {
+      try {
+        const result = await sendCommandToFigma("distribute_nodes", { nodeIds, direction, spacing });
+        const typedResult = result as { distributedCount: number; direction: string; spacing: number };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Distributed ${typedResult.distributedCount} node(s) ${typedResult.direction} with spacing ${typedResult.spacing}`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error distributing nodes: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Set Constraints Tool
+  server.tool(
+    "set_constraints",
+    "Set constraints on a node in auto-layout/frame parents",
+    {
+      nodeId: z.string().describe("Node ID"),
+      horizontal: z.enum(["MIN", "CENTER", "MAX", "STRETCH", "SCALE"]).describe("Horizontal constraint"),
+      vertical: z.enum(["MIN", "CENTER", "MAX", "STRETCH", "SCALE"]).describe("Vertical constraint"),
+    },
+    async ({ nodeId, horizontal, vertical }) => {
+      try {
+        const result = await sendCommandToFigma("set_constraints", { nodeId, horizontal, vertical });
+        const typedResult = result as { name: string; constraints: { horizontal: string; vertical: string } };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Set constraints on "${typedResult.name}" to ${typedResult.constraints.horizontal}/${typedResult.constraints.vertical}`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting constraints: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Set Blend Mode Tool
+  server.tool(
+    "set_blend_mode",
+    "Set blend mode on a node in Figma",
+    {
+      nodeId: z.string().describe("Node ID"),
+      blendMode: z.string().describe("Figma blend mode (e.g. NORMAL, MULTIPLY, SCREEN)"),
+    },
+    async ({ nodeId, blendMode }) => {
+      try {
+        const result = await sendCommandToFigma("set_blend_mode", { nodeId, blendMode });
+        const typedResult = result as { name: string; blendMode: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Set blend mode of "${typedResult.name}" to ${typedResult.blendMode}`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting blend mode: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Set Gradient Fill Tool
+  server.tool(
+    "set_gradient_fill",
+    "Apply a gradient paint to a node fill",
+    {
+      nodeId: z.string().describe("Node ID"),
+      gradientType: z.enum(["GRADIENT_LINEAR", "GRADIENT_RADIAL", "GRADIENT_ANGULAR", "GRADIENT_DIAMOND"]).describe("Gradient type"),
+      stops: z.array(z.object({
+        position: z.number().min(0).max(1).describe("Stop position 0-1"),
+        r: z.number().min(0).max(1).describe("Red 0-1"),
+        g: z.number().min(0).max(1).describe("Green 0-1"),
+        b: z.number().min(0).max(1).describe("Blue 0-1"),
+        a: z.number().min(0).max(1).optional().describe("Alpha 0-1 (default 1)"),
+      })).min(2).describe("Gradient stops"),
+    },
+    async ({ nodeId, gradientType, stops }) => {
+      try {
+        const result = await sendCommandToFigma("set_gradient_fill", { nodeId, gradientType, stops });
+        const typedResult = result as { name: string; gradientType: string; stopCount: number };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Applied ${typedResult.gradientType} gradient with ${typedResult.stopCount} stops to "${typedResult.name}"`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting gradient fill: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
   // Rename Node Tool
   server.tool(
     "rename_node",

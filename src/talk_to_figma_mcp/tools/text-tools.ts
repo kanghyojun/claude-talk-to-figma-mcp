@@ -529,6 +529,207 @@ export function registerTextTools(server: McpServer): void {
     }
   );
 
+  // Set Text Align Horizontal Tool
+  server.tool(
+    "set_text_align_horizontal",
+    "Set horizontal text alignment of a text node",
+    {
+      nodeId: z.string().describe("Text node ID"),
+      textAlignHorizontal: z.enum(["LEFT", "CENTER", "RIGHT", "JUSTIFIED"]).describe("Horizontal text alignment"),
+    },
+    async ({ nodeId, textAlignHorizontal }) => {
+      try {
+        const result = await sendCommandToFigma("set_text_align_horizontal", {
+          nodeId,
+          textAlignHorizontal,
+        });
+        const typedResult = result as { name: string; textAlignHorizontal: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Set horizontal alignment of "${typedResult.name}" to ${typedResult.textAlignHorizontal}`,
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting text alignment: ${error instanceof Error ? error.message : String(error)}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  // Set Range Font Size Tool
+  server.tool(
+    "set_range_font_size",
+    "Set font size for a specific text range",
+    {
+      nodeId: z.string().describe("Text node ID"),
+      start: z.number().int().min(0).describe("Start index (inclusive)"),
+      end: z.number().int().min(1).describe("End index (exclusive)"),
+      fontSize: z.number().positive().describe("Font size in px"),
+    },
+    async ({ nodeId, start, end, fontSize }) => {
+      try {
+        const result = await sendCommandToFigma("set_range_font_size", {
+          nodeId,
+          start,
+          end,
+          fontSize,
+        });
+        const typedResult = result as { name: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Updated font size range [${start}, ${end}) on "${typedResult.name}" to ${fontSize}px`,
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting range font size: ${error instanceof Error ? error.message : String(error)}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  // Set Range Font Name Tool
+  server.tool(
+    "set_range_font_name",
+    "Set font family/style for a specific text range",
+    {
+      nodeId: z.string().describe("Text node ID"),
+      start: z.number().int().min(0).describe("Start index (inclusive)"),
+      end: z.number().int().min(1).describe("End index (exclusive)"),
+      family: z.string().describe("Font family"),
+      style: z.string().optional().describe("Font style"),
+    },
+    async ({ nodeId, start, end, family, style }) => {
+      try {
+        const result = await sendCommandToFigma("set_range_font_name", {
+          nodeId,
+          start,
+          end,
+          family,
+          style,
+        });
+        const typedResult = result as { name: string; fontName: { family: string; style: string } };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Updated font range [${start}, ${end}) on "${typedResult.name}" to ${typedResult.fontName.family} ${typedResult.fontName.style}`,
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting range font name: ${error instanceof Error ? error.message : String(error)}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  // Set Range Fills Tool
+  server.tool(
+    "set_range_fills",
+    "Set text fill color for a specific text range",
+    {
+      nodeId: z.string().describe("Text node ID"),
+      start: z.number().int().min(0).describe("Start index (inclusive)"),
+      end: z.number().int().min(1).describe("End index (exclusive)"),
+      r: z.number().min(0).max(1).describe("Red component"),
+      g: z.number().min(0).max(1).describe("Green component"),
+      b: z.number().min(0).max(1).describe("Blue component"),
+      a: z.number().min(0).max(1).optional().describe("Alpha component (default 1)"),
+    },
+    async ({ nodeId, start, end, r, g, b, a }) => {
+      try {
+        const result = await sendCommandToFigma("set_range_fills", {
+          nodeId,
+          start,
+          end,
+          color: { r, g, b, a },
+        });
+        const typedResult = result as { name: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Updated fill color range [${start}, ${end}) on "${typedResult.name}"`,
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting range fills: ${error instanceof Error ? error.message : String(error)}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  // Set Range Text Decoration Tool
+  server.tool(
+    "set_range_text_decoration",
+    "Set text decoration for a specific text range",
+    {
+      nodeId: z.string().describe("Text node ID"),
+      start: z.number().int().min(0).describe("Start index (inclusive)"),
+      end: z.number().int().min(1).describe("End index (exclusive)"),
+      textDecoration: z.enum(["NONE", "UNDERLINE", "STRIKETHROUGH"]).describe("Decoration"),
+    },
+    async ({ nodeId, start, end, textDecoration }) => {
+      try {
+        const result = await sendCommandToFigma("set_range_text_decoration", {
+          nodeId,
+          start,
+          end,
+          textDecoration,
+        });
+        const typedResult = result as { name: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Updated text decoration range [${start}, ${end}) on "${typedResult.name}" to ${textDecoration}`,
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting range text decoration: ${error instanceof Error ? error.message : String(error)}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
   // Load Font Async Tool
   server.tool(
     "load_font_async",

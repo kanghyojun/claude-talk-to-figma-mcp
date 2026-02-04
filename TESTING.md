@@ -122,6 +122,19 @@ Claude should be able to communicate with Figma and return information about the
 | Modify element | Ask Claude to change color of an element | Element color changed correctly |
 | Complex operation | Ask Claude to find text and modify it | Text correctly modified in multiple nodes |
 
+### 5. P2 Style System Manual Validation (Create -> Apply)
+
+Use this sequence to validate style creation and application end-to-end:
+
+| Step | Action (Claude prompt example) | Expected result |
+| ---- | ------------------------------- | --------------- |
+| 1 | "Create a paint style named `Brand/Primary` with color rgba(0.10, 0.40, 0.90, 1)." | New local paint style is created and appears in Figma styles panel. |
+| 2 | "Create a rectangle 240x120 and return its node id." | Rectangle is created and node id is returned. |
+| 3 | "Apply fill style `Brand/Primary` to that rectangle." | Rectangle fill updates to style color and node has `fillStyleId` set. |
+| 4 | "Create a text style named `Body/Regular` with Inter Regular 16, line height 24." | New local text style is created and visible in text styles. |
+| 5 | "Create a text node with content 'Style smoke test' and apply text style `Body/Regular`." | Text node is created and style is applied via `textStyleId`. |
+| 6 | "List document styles." | Returned `get_styles` output includes the newly created paint/text styles. |
+
 ## Common Problems and Solutions
 
 ### Connection Problems
@@ -205,6 +218,8 @@ Claude should be able to communicate with Figma and return information about the
 - [ ] Errors are handled and reported correctly
 - [ ] Automated tests pass successfully
 - [ ] Set fill color handles transparency correctly
+- [ ] Can create paint style and apply `fillStyleId` to a node
+- [ ] Can create text style and apply `textStyleId` to a text node
 
 ## Troubleshooting Automated Tests
 

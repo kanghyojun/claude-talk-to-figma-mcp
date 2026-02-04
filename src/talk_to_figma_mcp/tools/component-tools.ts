@@ -8,6 +8,124 @@ import { sendCommandToFigma } from "../utils/websocket";
  * @param server - The MCP server instance
  */
 export function registerComponentTools(server: McpServer): void {
+  // Create Component Tool
+  server.tool(
+    "create_component",
+    "Create a new reusable component in Figma",
+    {
+      name: z.string().optional().describe("Optional component name"),
+      x: z.number().optional().describe("X position (default: 0)"),
+      y: z.number().optional().describe("Y position (default: 0)"),
+      width: z.number().positive().optional().describe("Width (default: 100)"),
+      height: z.number().positive().optional().describe("Height (default: 100)"),
+    },
+    async ({ name, x, y, width, height }) => {
+      try {
+        const result = await sendCommandToFigma("create_component", {
+          name,
+          x,
+          y,
+          width,
+          height,
+        });
+        const typedResult = result as { id: string; name: string; key: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Created component "${typedResult.name}" with ID: ${typedResult.id} and key: ${typedResult.key}.`,
+            }
+          ]
+        }
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error creating component: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Add Component Property Tool
+  server.tool(
+    "add_component_property",
+    "Add a component property (variant, boolean, text, instance swap) to a component in Figma",
+    {
+      componentId: z.string().describe("ID of the component"),
+      propertyName: z.string().describe("Name of the property to add"),
+      propertyType: z.enum(["BOOLEAN", "TEXT", "INSTANCE_SWAP", "VARIANT"]).describe("Type of component property"),
+      defaultValue: z.union([z.string(), z.boolean()]).optional().describe("Optional default value"),
+    },
+    async ({ componentId, propertyName, propertyType, defaultValue }) => {
+      try {
+        const result = await sendCommandToFigma("add_component_property", {
+          componentId,
+          propertyName,
+          propertyType,
+          defaultValue,
+        });
+        const typedResult = result as { name: string; propertyName: string; propertyType: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Added ${typedResult.propertyType} property "${typedResult.propertyName}" to component "${typedResult.name}".`,
+            }
+          ]
+        }
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error adding component property: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Set Instance Properties Tool
+  server.tool(
+    "set_properties",
+    "Set properties on a component instance in Figma",
+    {
+      instanceId: z.string().describe("ID of the instance node"),
+      properties: z.record(z.string(), z.union([z.string(), z.boolean()])).describe("Property map to set on the instance"),
+    },
+    async ({ instanceId, properties }) => {
+      try {
+        const result = await sendCommandToFigma("set_properties", {
+          instanceId,
+          properties,
+        });
+        const typedResult = result as { name: string };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Updated ${Object.keys(properties).length} instance propertie(s) on "${typedResult.name}".`,
+            }
+          ]
+        }
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error setting instance properties: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
   // Create Component Instance Tool
   server.tool(
     "create_component_instance",

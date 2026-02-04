@@ -4,6 +4,8 @@ import { registerCreationTools } from "./creation-tools";
 import { registerModificationTools } from "./modification-tools";
 import { registerTextTools } from "./text-tools";
 import { registerComponentTools } from "./component-tools";
+import { registerVariableTools } from "./variable-tools";
+import { registerStyleTools } from "./style-tools";
 
 /**
  * Register all Figma tools to the MCP server
@@ -16,6 +18,8 @@ export function registerTools(server: McpServer): void {
   registerModificationTools(server);
   registerTextTools(server);
   registerComponentTools(server);
+  registerVariableTools(server);
+  registerStyleTools(server);
 }
 
 // Export all tool registration functions for individual usage if needed
@@ -24,5 +28,7 @@ export {
   registerCreationTools,
   registerModificationTools,
   registerTextTools,
-  registerComponentTools
+  registerComponentTools,
+  registerVariableTools,
+  registerStyleTools
 };
