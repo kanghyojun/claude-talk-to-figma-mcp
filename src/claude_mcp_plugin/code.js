@@ -54,8 +54,10 @@ figma.ui.onmessage = async (msg) => {
       break;
     case "execute-command":
       // Execute commands received from UI (which gets them from WebSocket)
+      console.log("[execute-command] Received:", msg.command, msg.id);
       try {
         const result = await handleCommand(msg.command, msg.params);
+        console.log("[execute-command] Success:", msg.command, msg.id);
         // Send result back to UI
         figma.ui.postMessage({
           type: "command-result",
@@ -63,6 +65,7 @@ figma.ui.onmessage = async (msg) => {
           result,
         });
       } catch (error) {
+        console.log("[execute-command] Error:", msg.command, error.message);
         figma.ui.postMessage({
           type: "command-error",
           id: msg.id,
@@ -316,7 +319,27 @@ async function getNodeInfo(nodeId) {
     format: "JSON_REST_V1",
   });
 
-  return response.document;
+  const result = response.document;
+
+  console.log("[getNodeInfo] node.type:", node.type);
+
+  // Add componentProperties for INSTANCE nodes
+  if (node.type === "INSTANCE") {
+    console.log("[getNodeInfo] INSTANCE componentProperties:", JSON.stringify(node.componentProperties));
+    result.componentProperties = node.componentProperties;
+    const mainComponent = await node.getMainComponentAsync();
+    result.mainComponentId = mainComponent ? mainComponent.id : null;
+    console.log("[getNodeInfo] mainComponentId:", result.mainComponentId);
+  }
+
+  // Add componentPropertyDefinitions for COMPONENT nodes
+  if (node.type === "COMPONENT" || node.type === "COMPONENT_SET") {
+    console.log("[getNodeInfo] COMPONENT componentPropertyDefinitions:", JSON.stringify(node.componentPropertyDefinitions));
+    result.componentPropertyDefinitions = node.componentPropertyDefinitions;
+  }
+
+  console.log("[getNodeInfo] final result keys:", Object.keys(result));
+  return result;
 }
 
 async function getNodesInfo(nodeIds) {
@@ -2509,17 +2532,19 @@ async function setGradientFill(params) {
     throw new Error(`Node does not support fills: ${nodeId}`);
   }
 
-  const defaultHandlesByType = {
-    GRADIENT_LINEAR: [{ x: 0, y: 0.5 }, { x: 1, y: 0.5 }, { x: 0, y: 1 }],
-    GRADIENT_RADIAL: [{ x: 0.5, y: 0.5 }, { x: 1, y: 0.5 }, { x: 0.5, y: 1 }],
-    GRADIENT_ANGULAR: [{ x: 0.5, y: 0.5 }, { x: 1, y: 0.5 }, { x: 0.5, y: 1 }],
-    GRADIENT_DIAMOND: [{ x: 0.5, y: 0.5 }, { x: 1, y: 0.5 }, { x: 0.5, y: 1 }],
+  // gradientTransform is a 2x3 matrix [[a, c, tx], [b, d, ty]]
+  // Default: identity-like transform for a horizontal gradient
+  const defaultTransformByType = {
+    GRADIENT_LINEAR: [[1, 0, 0], [0, 1, 0]],
+    GRADIENT_RADIAL: [[0.5, 0, 0.5], [0, 0.5, 0.5]],
+    GRADIENT_ANGULAR: [[0.5, 0, 0.5], [0, 0.5, 0.5]],
+    GRADIENT_DIAMOND: [[0.5, 0, 0.5], [0, 0.5, 0.5]],
   };
 
   node.fills = [
     {
       type: gradientType,
-      gradientHandlePositions: defaultHandlesByType[gradientType],
+      gradientTransform: defaultTransformByType[gradientType],
       gradientStops: stops.map((stop) => ({
         position: stop.position,
         color: {
@@ -3387,6 +3412,7 @@ async function createTextStyle(params) {
 
 // Set Fill Style ID Tool
 async function setFillStyleId(params) {
+  console.log("[setFillStyleId] params:", JSON.stringify(params));
   const { nodeId, fillStyleId } = params || {};
 
   if (!nodeId) {
@@ -3397,16 +3423,22 @@ async function setFillStyleId(params) {
     throw new Error("Missing fillStyleId parameter");
   }
 
+  console.log("[setFillStyleId] Getting node:", nodeId);
   const node = await figma.getNodeByIdAsync(nodeId);
   if (!node) {
     throw new Error(`Node not found with ID: ${nodeId}`);
   }
+  console.log("[setFillStyleId] Node found:", node.name, node.type);
 
   if (!("fillStyleId" in node)) {
     throw new Error(`Node with ID ${nodeId} does not support fill styles`);
   }
 
+  console.log("[setFillStyleId] Getting paint styles...");
   const paintStyles = await figma.getLocalPaintStylesAsync();
+  console.log("[setFillStyleId] Found paint styles:", paintStyles.length);
+  paintStyles.forEach((s) => console.log(`  - ${s.name}: id=${s.id}, key=${s.key}`));
+
   const foundStyle = paintStyles.find(
     (style) => style.id === fillStyleId || style.key === fillStyleId
   );
@@ -3415,12 +3447,14 @@ async function setFillStyleId(params) {
     throw new Error(`Paint style with ID "${fillStyleId}" not found. Make sure the style exists in your local styles.`);
   }
 
-  node.fillStyleId = foundStyle.id;
+  console.log("[setFillStyleId] Applying style:", foundStyle.name);
+  await node.setFillStyleIdAsync(foundStyle.id);
+  console.log("[setFillStyleId] Style applied successfully");
 
   return {
     id: node.id,
     name: node.name,
-    fillStyleId: node.fillStyleId,
+    fillStyleId: foundStyle.id,
     styleName: foundStyle.name,
   };
 }
@@ -4406,6 +4440,7 @@ async function createVariableCollection(params) {
     throw new Error("Missing name parameter");
   }
 
+  // createVariableCollection is synchronous
   const collection = figma.variables.createVariableCollection(name);
 
   return {
@@ -4421,6 +4456,8 @@ async function createVariableCollection(params) {
 
 // Create a new variable in a collection
 async function createVariable(params) {
+  console.log("[createVariable] START with params:", JSON.stringify(params));
+
   const { name, collectionId, resolvedType, value, modeId } = params || {};
 
   if (!name) {
@@ -4438,12 +4475,26 @@ async function createVariable(params) {
     throw new Error(`Invalid resolvedType: ${resolvedType}. Must be one of: ${validTypes.join(", ")}`);
   }
 
-  const variable = figma.variables.createVariable(name, collectionId, resolvedType);
+  console.log("[createVariable] Getting collection by ID:", collectionId);
+
+  // Get the collection object first (passing collection ID is deprecated)
+  const collection = await figma.variables.getVariableCollectionByIdAsync(collectionId);
+  console.log("[createVariable] Collection result:", collection ? collection.name : "null");
+
+  if (!collection) {
+    throw new Error(`Variable collection not found with ID: ${collectionId}`);
+  }
+
+  console.log("[createVariable] Creating variable:", name, resolvedType);
+
+  // createVariable is synchronous and requires collection object, not ID
+  const variable = figma.variables.createVariable(name, collection, resolvedType);
+  console.log("[createVariable] Variable created:", variable.id);
 
   // Set initial value if provided
   if (value !== undefined) {
-    const collection = figma.variables.getVariableCollectionById(collectionId);
     const targetModeId = modeId || collection.defaultModeId;
+    console.log("[createVariable] Setting value for mode:", targetModeId);
 
     let processedValue = value;
 
@@ -4458,7 +4509,10 @@ async function createVariable(params) {
     }
 
     variable.setValueForMode(targetModeId, processedValue);
+    console.log("[createVariable] Value set successfully");
   }
+
+  console.log("[createVariable] DONE, returning result");
 
   return {
     id: variable.id,
@@ -4476,7 +4530,7 @@ async function getVariableById(params) {
     throw new Error("Missing variableId parameter");
   }
 
-  const variable = figma.variables.getVariableById(variableId);
+  const variable = await figma.variables.getVariableByIdAsync(variableId);
 
   if (!variable) {
     throw new Error(`Variable not found with ID: ${variableId}`);
@@ -4549,7 +4603,7 @@ async function setBoundVariable(params) {
     throw new Error(`Node not found with ID: ${nodeId}`);
   }
 
-  const variable = figma.variables.getVariableById(variableId);
+  const variable = await figma.variables.getVariableByIdAsync(variableId);
   if (!variable) {
     throw new Error(`Variable not found with ID: ${variableId}`);
   }
@@ -4581,7 +4635,7 @@ async function setBoundVariable(params) {
     throw new Error(`Node type ${node.type} does not support variable binding`);
   }
 
-  // For fill and stroke, we need to handle the paint array
+  // For fill and stroke, we need to set the variable binding on the paint directly
   if (field === "fill" || field === "stroke") {
     const paintProperty = field === "fill" ? "fills" : "strokes";
     const paints = node[paintProperty];
@@ -4595,10 +4649,20 @@ async function setBoundVariable(params) {
       node[paintProperty] = [defaultPaint];
     }
 
-    // Bind to the first paint's color
-    node.setBoundVariable(figmaField, variable, 0);
+    // Clone the paints array and set the variable binding on the first paint
+    const newPaints = JSON.parse(JSON.stringify(node[paintProperty]));
+    const paint = newPaints[0];
+
+    // Set the bound variable on the paint's color
+    paint.boundVariables = paint.boundVariables || {};
+    paint.boundVariables.color = {
+      type: "VARIABLE_ALIAS",
+      id: variable.id
+    };
+
+    node[paintProperty] = newPaints;
   } else {
-    node.setBoundVariable(figmaField, variable);
+    await node.setBoundVariableAsync(figmaField, variable);
   }
 
   return {

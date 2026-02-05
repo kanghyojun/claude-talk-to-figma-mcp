@@ -355,7 +355,7 @@ export function registerDocumentTools(server: McpServer): void {
         .enum(["PNG", "JPG", "SVG", "PDF"])
         .optional()
         .describe("Export format"),
-      scale: z.number().positive().optional().describe("Export scale"),
+      scale: z.coerce.number().positive().optional().describe("Export scale"),
     },
     async ({ nodeId, format, scale }) => {
       try {

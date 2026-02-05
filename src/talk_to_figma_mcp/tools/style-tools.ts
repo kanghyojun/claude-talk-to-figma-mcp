@@ -13,10 +13,10 @@ export function registerStyleTools(server: McpServer): void {
     "Create a local paint style (solid color) in Figma",
     {
       name: z.string().min(1).describe("Name of the paint style"),
-      r: z.number().min(0).max(1).describe("Red component (0-1)"),
-      g: z.number().min(0).max(1).describe("Green component (0-1)"),
-      b: z.number().min(0).max(1).describe("Blue component (0-1)"),
-      a: z.number().min(0).max(1).optional().describe("Alpha/opacity (0-1, defaults to 1)"),
+      r: z.coerce.number().min(0).max(1).describe("Red component (0-1)"),
+      g: z.coerce.number().min(0).max(1).describe("Green component (0-1)"),
+      b: z.coerce.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: z.coerce.number().min(0).max(1).optional().describe("Alpha/opacity (0-1, defaults to 1)"),
       description: z.string().optional().describe("Optional style description"),
     },
     async ({ name, r, g, b, a, description }) => {
@@ -56,9 +56,9 @@ export function registerStyleTools(server: McpServer): void {
       name: z.string().min(1).describe("Name of the text style"),
       fontFamily: z.string().optional().describe("Font family (default: Inter)"),
       fontStyle: z.string().optional().describe("Font style (default: Regular)"),
-      fontSize: z.number().positive().optional().describe("Font size in px (default: 16)"),
-      lineHeightPx: z.number().positive().optional().describe("Line height in px"),
-      letterSpacingPx: z.number().optional().describe("Letter spacing in px"),
+      fontSize: z.coerce.number().positive().optional().describe("Font size in px (default: 16)"),
+      lineHeightPx: z.coerce.number().positive().optional().describe("Line height in px"),
+      letterSpacingPx: z.coerce.number().optional().describe("Letter spacing in px"),
       description: z.string().optional().describe("Optional style description"),
     },
     async ({ name, fontFamily, fontStyle, fontSize, lineHeightPx, letterSpacingPx, description }) => {

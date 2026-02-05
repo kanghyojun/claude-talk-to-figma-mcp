@@ -1,6 +1,25 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { sendCommandToFigma } from "../utils/websocket";
+import * as fs from "fs";
+import * as path from "path";
+
+// File logger for component tools debugging
+const LOG_DIR = "/tmp/claude-talk-to-figma-mcp";
+const LOG_FILE = path.join(LOG_DIR, "component-tools.log");
+
+function ensureLogDir(): void {
+  if (!fs.existsSync(LOG_DIR)) {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+  }
+}
+
+function logToFile(level: string, message: string, data?: unknown): void {
+  ensureLogDir();
+  const timestamp = new Date().toISOString();
+  const logEntry = `[${timestamp}] [${level}] ${message}${data !== undefined ? ` | Data: ${JSON.stringify(data)}` : ""}\n`;
+  fs.appendFileSync(LOG_FILE, logEntry);
+}
 
 /**
  * Register component-related tools to the MCP server
@@ -14,13 +33,15 @@ export function registerComponentTools(server: McpServer): void {
     "Create a new reusable component in Figma",
     {
       name: z.string().optional().describe("Optional component name"),
-      x: z.number().optional().describe("X position (default: 0)"),
-      y: z.number().optional().describe("Y position (default: 0)"),
-      width: z.number().positive().optional().describe("Width (default: 100)"),
-      height: z.number().positive().optional().describe("Height (default: 100)"),
+      x: z.coerce.number().optional().describe("X position (default: 0)"),
+      y: z.coerce.number().optional().describe("Y position (default: 0)"),
+      width: z.coerce.number().positive().optional().describe("Width (default: 100)"),
+      height: z.coerce.number().positive().optional().describe("Height (default: 100)"),
     },
     async ({ name, x, y, width, height }) => {
+      logToFile("INFO", "create_component called", { name, x, y, width, height });
       try {
+        logToFile("DEBUG", "Sending command to Figma", { command: "create_component", params: { name, x, y, width, height } });
         const result = await sendCommandToFigma("create_component", {
           name,
           x,
@@ -28,7 +49,9 @@ export function registerComponentTools(server: McpServer): void {
           width,
           height,
         });
+        logToFile("DEBUG", "Received result from Figma", { resultType: typeof result, result });
         const typedResult = result as { id: string; name: string; key: string };
+        logToFile("INFO", "create_component success", { id: typedResult.id, name: typedResult.name, key: typedResult.key });
         return {
           content: [
             {
@@ -38,11 +61,13 @@ export function registerComponentTools(server: McpServer): void {
           ]
         }
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logToFile("ERROR", "create_component failed", { error: errorMessage, stack: error instanceof Error ? error.stack : undefined });
         return {
           content: [
             {
               type: "text",
-              text: `Error creating component: ${error instanceof Error ? error.message : String(error)}`,
+              text: `Error creating component: ${errorMessage}`,
             },
           ],
         };
@@ -132,8 +157,8 @@ export function registerComponentTools(server: McpServer): void {
     "Create an instance of a component in Figma",
     {
       componentKey: z.string().describe("Key of the component to instantiate"),
-      x: z.number().describe("X position"),
-      y: z.number().describe("Y position"),
+      x: z.coerce.number().describe("X position"),
+      y: z.coerce.number().describe("Y position"),
     },
     async ({ componentKey, x, y }) => {
       try {
