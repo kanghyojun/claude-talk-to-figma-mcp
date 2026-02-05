@@ -1,6 +1,25 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { sendCommandToFigma } from "../utils/websocket";
+import * as fs from "fs";
+import * as path from "path";
+
+// File logger for variable tools debugging
+const LOG_DIR = "/tmp/claude-talk-to-figma-mcp";
+const LOG_FILE = path.join(LOG_DIR, "variable-tools.log");
+
+function ensureLogDir(): void {
+  if (!fs.existsSync(LOG_DIR)) {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+  }
+}
+
+function logToFile(level: string, message: string, data?: unknown): void {
+  ensureLogDir();
+  const timestamp = new Date().toISOString();
+  const logEntry = `[${timestamp}] [${level}] ${message}${data !== undefined ? ` | Data: ${JSON.stringify(data)}` : ""}\n`;
+  fs.appendFileSync(LOG_FILE, logEntry);
+}
 
 /**
  * Register variable tools to the MCP server
@@ -49,7 +68,7 @@ export function registerVariableTools(server: McpServer): void {
       try {
         const result = await sendCommandToFigma("create_variable_collection", {
           name,
-        }, 120000);
+        }, 10000);
         const typedResult = result as {
           id: string;
           name: string;
@@ -90,13 +109,13 @@ export function registerVariableTools(server: McpServer): void {
       value: z
         .union([
           z.boolean(),
-          z.number(),
+          z.coerce.number(),
           z.string(),
           z.object({
-            r: z.number().min(0).max(1).describe("Red channel (0-1)"),
-            g: z.number().min(0).max(1).describe("Green channel (0-1)"),
-            b: z.number().min(0).max(1).describe("Blue channel (0-1)"),
-            a: z.number().min(0).max(1).optional().describe("Alpha channel (0-1, default: 1)"),
+            r: z.coerce.number().min(0).max(1).describe("Red channel (0-1)"),
+            g: z.coerce.number().min(0).max(1).describe("Green channel (0-1)"),
+            b: z.coerce.number().min(0).max(1).describe("Blue channel (0-1)"),
+            a: z.coerce.number().min(0).max(1).optional().describe("Alpha channel (0-1, default: 1)"),
           }),
         ])
         .optional()
@@ -111,7 +130,7 @@ export function registerVariableTools(server: McpServer): void {
           resolvedType,
           value,
           modeId,
-        }, 120000);
+        }, 10000);
         const typedResult = result as {
           id: string;
           name: string;
@@ -150,7 +169,7 @@ export function registerVariableTools(server: McpServer): void {
       try {
         const result = await sendCommandToFigma("get_variable_by_id", {
           variableId,
-        }, 120000);
+        }, 10000);
         return {
           content: [
             {
@@ -178,8 +197,11 @@ export function registerVariableTools(server: McpServer): void {
     "Get all local variable collections in the current Figma file",
     {},
     async () => {
+      logToFile("INFO", "get_local_variable_collections called");
       try {
-        const result = await sendCommandToFigma("get_local_variable_collections", {}, 120000);
+        logToFile("DEBUG", "Sending command to Figma", { command: "get_local_variable_collections" });
+        const result = await sendCommandToFigma("get_local_variable_collections", {}, 10000);
+        logToFile("DEBUG", "Received result from Figma", { resultType: typeof result, isArray: Array.isArray(result) });
         const typedResult = result as Array<{
           id: string;
           name: string;
@@ -187,6 +209,7 @@ export function registerVariableTools(server: McpServer): void {
           defaultModeId: string;
           variableIds: string[];
         }>;
+        logToFile("INFO", "get_local_variable_collections success", { collectionCount: typedResult.length });
         return {
           content: [
             {
@@ -196,11 +219,13 @@ export function registerVariableTools(server: McpServer): void {
           ],
         };
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logToFile("ERROR", "get_local_variable_collections failed", { error: errorMessage, stack: error instanceof Error ? error.stack : undefined });
         return {
           content: [
             {
               type: "text",
-              text: `Error getting variable collections: ${error instanceof Error ? error.message : String(error)}`,
+              text: `Error getting variable collections: ${errorMessage}`,
             },
           ],
         };
@@ -216,10 +241,13 @@ export function registerVariableTools(server: McpServer): void {
       collectionId: z.string().optional().describe("Optional collection ID to filter variables"),
     },
     async ({ collectionId }) => {
+      logToFile("INFO", "get_local_variables called", { collectionId });
       try {
+        logToFile("DEBUG", "Sending command to Figma", { command: "get_local_variables", params: { collectionId } });
         const result = await sendCommandToFigma("get_local_variables", {
           collectionId,
-        }, 120000);
+        }, 10000);
+        logToFile("DEBUG", "Received result from Figma", { resultType: typeof result, isArray: Array.isArray(result) });
         const typedResult = result as Array<{
           id: string;
           name: string;
@@ -227,6 +255,7 @@ export function registerVariableTools(server: McpServer): void {
           collectionId: string;
           valuesByMode: Record<string, unknown>;
         }>;
+        logToFile("INFO", "get_local_variables success", { variableCount: typedResult.length });
         return {
           content: [
             {
@@ -236,11 +265,13 @@ export function registerVariableTools(server: McpServer): void {
           ],
         };
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logToFile("ERROR", "get_local_variables failed", { error: errorMessage, stack: error instanceof Error ? error.stack : undefined });
         return {
           content: [
             {
               type: "text",
-              text: `Error getting variables: ${error instanceof Error ? error.message : String(error)}`,
+              text: `Error getting variables: ${errorMessage}`,
             },
           ],
         };
@@ -402,7 +433,7 @@ export function registerVariableTools(server: McpServer): void {
           nodeId,
           field,
           variableId,
-        }, 120000);
+        }, 10000);
         const typedResult = result as { success: boolean; nodeId: string; field: string };
         return {
           content: [

@@ -124,6 +124,21 @@ export function filterFigmaNode(node: any, maxDepth: number = Infinity, currentD
     }
   }
 
+  // Add componentProperties for INSTANCE nodes
+  if (node.componentProperties) {
+    filtered.componentProperties = node.componentProperties;
+  }
+
+  // Add mainComponentId for INSTANCE nodes
+  if (node.mainComponentId) {
+    filtered.mainComponentId = node.mainComponentId;
+  }
+
+  // Add componentPropertyDefinitions for COMPONENT nodes
+  if (node.componentPropertyDefinitions) {
+    filtered.componentPropertyDefinitions = node.componentPropertyDefinitions;
+  }
+
   return filtered;
 }
 

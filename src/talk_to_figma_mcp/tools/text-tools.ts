@@ -572,9 +572,9 @@ export function registerTextTools(server: McpServer): void {
     "Set font size for a specific text range",
     {
       nodeId: z.string().describe("Text node ID"),
-      start: z.number().int().min(0).describe("Start index (inclusive)"),
-      end: z.number().int().min(1).describe("End index (exclusive)"),
-      fontSize: z.number().positive().describe("Font size in px"),
+      start: z.coerce.number().int().min(0).describe("Start index (inclusive)"),
+      end: z.coerce.number().int().min(1).describe("End index (exclusive)"),
+      fontSize: z.coerce.number().positive().describe("Font size in px"),
     },
     async ({ nodeId, start, end, fontSize }) => {
       try {
@@ -612,8 +612,8 @@ export function registerTextTools(server: McpServer): void {
     "Set font family/style for a specific text range",
     {
       nodeId: z.string().describe("Text node ID"),
-      start: z.number().int().min(0).describe("Start index (inclusive)"),
-      end: z.number().int().min(1).describe("End index (exclusive)"),
+      start: z.coerce.number().int().min(0).describe("Start index (inclusive)"),
+      end: z.coerce.number().int().min(1).describe("End index (exclusive)"),
       family: z.string().describe("Font family"),
       style: z.string().optional().describe("Font style"),
     },
@@ -654,12 +654,12 @@ export function registerTextTools(server: McpServer): void {
     "Set text fill color for a specific text range",
     {
       nodeId: z.string().describe("Text node ID"),
-      start: z.number().int().min(0).describe("Start index (inclusive)"),
-      end: z.number().int().min(1).describe("End index (exclusive)"),
-      r: z.number().min(0).max(1).describe("Red component"),
-      g: z.number().min(0).max(1).describe("Green component"),
-      b: z.number().min(0).max(1).describe("Blue component"),
-      a: z.number().min(0).max(1).optional().describe("Alpha component (default 1)"),
+      start: z.coerce.number().int().min(0).describe("Start index (inclusive)"),
+      end: z.coerce.number().int().min(1).describe("End index (exclusive)"),
+      r: z.coerce.number().min(0).max(1).describe("Red component"),
+      g: z.coerce.number().min(0).max(1).describe("Green component"),
+      b: z.coerce.number().min(0).max(1).describe("Blue component"),
+      a: z.coerce.number().min(0).max(1).optional().describe("Alpha component (default 1)"),
     },
     async ({ nodeId, start, end, r, g, b, a }) => {
       try {
@@ -697,8 +697,8 @@ export function registerTextTools(server: McpServer): void {
     "Set text decoration for a specific text range",
     {
       nodeId: z.string().describe("Text node ID"),
-      start: z.number().int().min(0).describe("Start index (inclusive)"),
-      end: z.number().int().min(1).describe("End index (exclusive)"),
+      start: z.coerce.number().int().min(0).describe("Start index (inclusive)"),
+      end: z.coerce.number().int().min(1).describe("End index (exclusive)"),
       textDecoration: z.enum(["NONE", "UNDERLINE", "STRIKETHROUGH"]).describe("Decoration"),
     },
     async ({ nodeId, start, end, textDecoration }) => {
