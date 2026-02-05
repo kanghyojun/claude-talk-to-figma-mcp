@@ -16,10 +16,10 @@ export function registerModificationTools(server: McpServer): void {
     "Set the fill color of a node in Figma. Alpha component defaults to 1 (fully opaque) if not specified. Use alpha 0 for fully transparent.",
     {
       nodeId: z.string().describe("The ID of the node to modify"),
-      r: z.number().min(0).max(1).describe("Red component (0-1)"),
-      g: z.number().min(0).max(1).describe("Green component (0-1)"),
-      b: z.number().min(0).max(1).describe("Blue component (0-1)"),
-      a: z.number().min(0).max(1).optional().describe("Alpha component (0-1, defaults to 1 if not specified)"),
+      r: z.coerce.number().min(0).max(1).describe("Red component (0-1)"),
+      g: z.coerce.number().min(0).max(1).describe("Green component (0-1)"),
+      b: z.coerce.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: z.coerce.number().min(0).max(1).optional().describe("Alpha component (0-1, defaults to 1 if not specified)"),
     },
     async ({ nodeId, r, g, b, a }) => {
       try {
@@ -64,11 +64,11 @@ export function registerModificationTools(server: McpServer): void {
     "Set the stroke color of a node in Figma (defaults: opacity 1, weight 1)",
     {
       nodeId: z.string().describe("The ID of the node to modify"),
-      r: z.number().min(0).max(1).describe("Red component (0-1)"),
-      g: z.number().min(0).max(1).describe("Green component (0-1)"),
-      b: z.number().min(0).max(1).describe("Blue component (0-1)"),
-      a: z.number().min(0).max(1).optional().describe("Alpha component (0-1)"),
-      strokeWeight: z.number().min(0).optional().describe("Stroke weight >= 0)"),
+      r: z.coerce.number().min(0).max(1).describe("Red component (0-1)"),
+      g: z.coerce.number().min(0).max(1).describe("Green component (0-1)"),
+      b: z.coerce.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: z.coerce.number().min(0).max(1).optional().describe("Alpha component (0-1)"),
+      strokeWeight: z.coerce.number().min(0).optional().describe("Stroke weight >= 0)"),
     },
     async ({ nodeId, r, g, b, a, strokeWeight }) => {
       try {
@@ -163,8 +163,8 @@ export function registerModificationTools(server: McpServer): void {
     "Move a node to a new position in Figma",
     {
       nodeId: z.string().describe("The ID of the node to move"),
-      x: z.number().describe("New X position (local coordinates, relative to parent)"),
-      y: z.number().describe("New Y position (local coordinates, relative to parent)"),
+      x: z.coerce.number().describe("New X position (local coordinates, relative to parent)"),
+      y: z.coerce.number().describe("New Y position (local coordinates, relative to parent)"),
     },
     async ({ nodeId, x, y }) => {
       try {
@@ -197,8 +197,8 @@ export function registerModificationTools(server: McpServer): void {
     "Resize a node in Figma",
     {
       nodeId: z.string().describe("The ID of the node to resize"),
-      width: z.number().positive().describe("New width"),
-      height: z.number().positive().describe("New height"),
+      width: z.coerce.number().positive().describe("New width"),
+      height: z.coerce.number().positive().describe("New height"),
     },
     async ({ nodeId, width, height }) => {
       try {
@@ -266,7 +266,7 @@ export function registerModificationTools(server: McpServer): void {
     "Set the corner radius of a node in Figma",
     {
       nodeId: z.string().describe("The ID of the node to modify"),
-      radius: z.number().min(0).describe("Corner radius value"),
+      radius: z.coerce.number().min(0).describe("Corner radius value"),
       corners: z
         .array(z.boolean())
         .length(4)
@@ -311,11 +311,11 @@ export function registerModificationTools(server: McpServer): void {
     {
       nodeId: z.string().describe("The ID of the node to configure auto layout"),
       layoutMode: z.enum(["HORIZONTAL", "VERTICAL", "NONE"]).describe("Layout direction"),
-      paddingTop: z.number().optional().describe("Top padding in pixels"),
-      paddingBottom: z.number().optional().describe("Bottom padding in pixels"),
-      paddingLeft: z.number().optional().describe("Left padding in pixels"),
-      paddingRight: z.number().optional().describe("Right padding in pixels"),
-      itemSpacing: z.number().optional().describe("Spacing between items in pixels"),
+      paddingTop: z.coerce.number().optional().describe("Top padding in pixels"),
+      paddingBottom: z.coerce.number().optional().describe("Bottom padding in pixels"),
+      paddingLeft: z.coerce.number().optional().describe("Left padding in pixels"),
+      paddingRight: z.coerce.number().optional().describe("Right padding in pixels"),
+      itemSpacing: z.coerce.number().optional().describe("Spacing between items in pixels"),
       primaryAxisAlignItems: z.enum(["MIN", "CENTER", "MAX", "SPACE_BETWEEN"]).optional().describe("Alignment along primary axis"),
       counterAxisAlignItems: z.enum(["MIN", "CENTER", "MAX"]).optional().describe("Alignment along counter axis"),
       layoutWrap: z.enum(["WRAP", "NO_WRAP"]).optional().describe("Whether items wrap to new lines"),
@@ -370,17 +370,17 @@ export function registerModificationTools(server: McpServer): void {
         z.object({
           type: z.enum(["DROP_SHADOW", "INNER_SHADOW", "LAYER_BLUR", "BACKGROUND_BLUR"]).describe("Effect type"),
           color: z.object({
-            r: z.number().min(0).max(1).describe("Red (0-1)"),
-            g: z.number().min(0).max(1).describe("Green (0-1)"),
-            b: z.number().min(0).max(1).describe("Blue (0-1)"),
-            a: z.number().min(0).max(1).describe("Alpha (0-1)")
+            r: z.coerce.number().min(0).max(1).describe("Red (0-1)"),
+            g: z.coerce.number().min(0).max(1).describe("Green (0-1)"),
+            b: z.coerce.number().min(0).max(1).describe("Blue (0-1)"),
+            a: z.coerce.number().min(0).max(1).describe("Alpha (0-1)")
           }).optional().describe("Effect color (for shadows)"),
           offset: z.object({
-            x: z.number().describe("X offset"),
-            y: z.number().describe("Y offset")
+            x: z.coerce.number().describe("X offset"),
+            y: z.coerce.number().describe("Y offset")
           }).optional().describe("Offset (for shadows)"),
-          radius: z.number().optional().describe("Effect radius"),
-          spread: z.number().optional().describe("Shadow spread (for shadows)"),
+          radius: z.coerce.number().optional().describe("Effect radius"),
+          spread: z.coerce.number().optional().describe("Shadow spread (for shadows)"),
           visible: z.boolean().optional().describe("Whether the effect is visible"),
           blendMode: z.string().optional().describe("Blend mode")
         })
@@ -543,7 +543,7 @@ export function registerModificationTools(server: McpServer): void {
     {
       nodeId: z.string().describe("The ID of the node to reorder"),
       position: z.enum(["front", "back", "forward", "backward"]).optional().describe("Move to front/back or one step forward/backward"),
-      index: z.number().optional().describe("Direct index position within parent's children (0 = bottom). Overrides position if both provided."),
+      index: z.coerce.number().optional().describe("Direct index position within parent's children (0 = bottom). Overrides position if both provided."),
     },
     async ({ nodeId, position, index }) => {
       try {
@@ -614,15 +614,15 @@ export function registerModificationTools(server: McpServer): void {
       nodeId: z.string().describe("The ID of the node to modify"),
       type: z.enum(["GRADIENT_LINEAR", "GRADIENT_RADIAL", "GRADIENT_ANGULAR", "GRADIENT_DIAMOND"]).describe("Gradient type"),
       stops: z.array(z.object({
-        position: z.number().min(0).max(1).describe("Stop position (0-1, where 0 is start and 1 is end)"),
+        position: z.coerce.number().min(0).max(1).describe("Stop position (0-1, where 0 is start and 1 is end)"),
         color: z.object({
-          r: z.number().min(0).max(1).describe("Red (0-1)"),
-          g: z.number().min(0).max(1).describe("Green (0-1)"),
-          b: z.number().min(0).max(1).describe("Blue (0-1)"),
-          a: z.number().min(0).max(1).optional().describe("Alpha (0-1, defaults to 1)"),
+          r: z.coerce.number().min(0).max(1).describe("Red (0-1)"),
+          g: z.coerce.number().min(0).max(1).describe("Green (0-1)"),
+          b: z.coerce.number().min(0).max(1).describe("Blue (0-1)"),
+          a: z.coerce.number().min(0).max(1).optional().describe("Alpha (0-1, defaults to 1)"),
         }),
       })).min(2).describe("Array of gradient color stops (minimum 2)"),
-      gradientTransform: z.array(z.array(z.number())).optional().describe("2x3 affine transform matrix [[a,b,tx],[c,d,ty]]. Defaults to left-to-right linear: [[1,0,0],[0,1,0]]"),
+      gradientTransform: z.array(z.array(z.coerce.number())).optional().describe("2x3 affine transform matrix [[a,b,tx],[c,d,ty]]. Defaults to left-to-right linear: [[1,0,0],[0,1,0]]"),
     },
     async ({ nodeId, type, stops, gradientTransform }) => {
       try {
