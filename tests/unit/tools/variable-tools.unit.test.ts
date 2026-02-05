@@ -91,7 +91,7 @@ describe("variable tools unit", () => {
         resolvedType: "COLOR",
         value: { r: 0.2, g: 0.4, b: 0.8 },
         modeId: "M1",
-      });
+      }, 10000);
     });
 
     it("returns error message for non-Error exceptions", async () => {
