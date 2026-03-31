@@ -4762,30 +4762,6 @@ async function setCurrentPage(params) {
   };
 }
 
-    position: stop.position,
-    color: {
-      r: stop.color.r,
-      g: stop.color.g,
-      b: stop.color.b,
-      a: stop.color.a !== undefined ? stop.color.a : 1,
-    },
-  }));
-
-  const gradientFill = {
-    type: type,
-    gradientStops: gradientStops,
-    gradientTransform: gradientTransform || [[1, 0, 0], [0, 1, 0]],
-  };
-
-  node.fills = [gradientFill];
-
-  return {
-    id: node.id,
-    name: node.name,
-    fills: node.fills
-  };
-}
-
 // Boolean operation (union, subtract, intersect, exclude)
 async function booleanOperation(params) {
   const { nodeIds, operation, name } = params || {};
