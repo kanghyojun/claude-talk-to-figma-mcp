@@ -106,6 +106,29 @@ export function filterFigmaNode(node: any) {
     };
   }
 
+  // Pass through auto-layout properties (from JSON_REST_V1 export)
+  if (node.layoutMode && node.layoutMode !== "NONE") {
+    filtered.layoutMode = node.layoutMode;
+    if (node.itemSpacing !== undefined) filtered.itemSpacing = node.itemSpacing;
+    if (node.counterAxisSpacing !== undefined) filtered.counterAxisSpacing = node.counterAxisSpacing;
+    if (node.paddingLeft) filtered.paddingLeft = node.paddingLeft;
+    if (node.paddingRight) filtered.paddingRight = node.paddingRight;
+    if (node.paddingTop) filtered.paddingTop = node.paddingTop;
+    if (node.paddingBottom) filtered.paddingBottom = node.paddingBottom;
+    if (node.primaryAxisAlignItems) filtered.primaryAxisAlignItems = node.primaryAxisAlignItems;
+    if (node.counterAxisAlignItems) filtered.counterAxisAlignItems = node.counterAxisAlignItems;
+    if (node.layoutWrap) filtered.layoutWrap = node.layoutWrap;
+    if (node.counterAxisAlignContent) filtered.counterAxisAlignContent = node.counterAxisAlignContent;
+  }
+
+  if (node.layoutSizingHorizontal) {
+    filtered.layoutSizingHorizontal = node.layoutSizingHorizontal;
+  }
+
+  if (node.layoutSizingVertical) {
+    filtered.layoutSizingVertical = node.layoutSizingVertical;
+  }
+
   if (node.children) {
     filtered.children = node.children
       .map((child: any) => filterFigmaNode(child))
