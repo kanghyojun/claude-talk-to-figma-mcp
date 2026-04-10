@@ -60,8 +60,8 @@ export function registerFigJamTools(server: McpServer): void {
     "create_sticky",
     "Create a sticky note in a FigJam board. Sticky notes are the primary way to add text content in FigJam.",
     {
-      x: z.number().describe("X position on the canvas"),
-      y: z.number().describe("Y position on the canvas"),
+      x: z.coerce.number().describe("X position on the canvas"),
+      y: z.coerce.number().describe("Y position on the canvas"),
       text: z.string().describe("Text content of the sticky note"),
       color: z
         .enum([
@@ -166,10 +166,10 @@ export function registerFigJamTools(server: McpServer): void {
     "create_shape_with_text",
     "Create a FigJam shape with text inside. Useful for flowcharts, diagrams, and process maps. Supported shapes: SQUARE, ELLIPSE, ROUNDED_RECTANGLE, DIAMOND, TRIANGLE_UP, TRIANGLE_DOWN, PARALLELOGRAM_RIGHT, PARALLELOGRAM_LEFT.",
     {
-      x: z.number().describe("X position on the canvas"),
-      y: z.number().describe("Y position on the canvas"),
-      width: z.number().optional().describe("Width of the shape (default: 200)"),
-      height: z.number().optional().describe("Height of the shape (default: 200)"),
+      x: z.coerce.number().describe("X position on the canvas"),
+      y: z.coerce.number().describe("Y position on the canvas"),
+      width: z.coerce.number().optional().describe("Width of the shape (default: 200)"),
+      height: z.coerce.number().optional().describe("Height of the shape (default: 200)"),
       shapeType: z
         .enum([
           "SQUARE",
@@ -345,10 +345,10 @@ export function registerFigJamTools(server: McpServer): void {
     "create_section",
     "Create a FigJam section. Sections are used to group and organise content on the FigJam board. They appear as labelled coloured regions.",
     {
-      x: z.number().describe("X position on the canvas"),
-      y: z.number().describe("Y position on the canvas"),
-      width: z.number().optional().describe("Width of the section (default: 800)"),
-      height: z.number().optional().describe("Height of the section (default: 600)"),
+      x: z.coerce.number().describe("X position on the canvas"),
+      y: z.coerce.number().describe("Y position on the canvas"),
+      width: z.coerce.number().optional().describe("Width of the section (default: 800)"),
+      height: z.coerce.number().optional().describe("Height of the section (default: 600)"),
       name: z.string().optional().describe("Label / name for the section"),
       fillColor: z
         .object({
