@@ -78,6 +78,19 @@ export function filterFigmaNode(node: any) {
     });
   }
 
+  if (node.effects && node.effects.length > 0) {
+    filtered.effects = node.effects.map((effect: any) => {
+      const processedEffect = { ...effect };
+      // Remove boundVariables
+      delete processedEffect.boundVariables;
+      // Convert color to hex if present (for shadow effects)
+      if (processedEffect.color) {
+        processedEffect.color = rgbaToHex(processedEffect.color);
+      }
+      return processedEffect;
+    });
+  }
+
   if (node.cornerRadius !== undefined) {
     filtered.cornerRadius = node.cornerRadius;
   }
