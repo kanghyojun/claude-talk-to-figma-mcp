@@ -43,6 +43,7 @@ export type FigmaCommand =
   | "get_document_info"
   | "get_selection"
   | "get_node_info"
+  | "figma_to_code"
   | "create_rectangle"
   | "create_frame"
   | "create_text"

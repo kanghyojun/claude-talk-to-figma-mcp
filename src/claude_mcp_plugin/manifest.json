@@ -2,7 +2,7 @@
   "name": "Claude Talk to Figma Plugin",
   "id": "claude-mcp-plugin",
   "api": "1.0.0",
-  "main": "code.js",
+  "main": "code.bundle.js",
   "ui": "ui.html",
   "editorType": [
     "figma",

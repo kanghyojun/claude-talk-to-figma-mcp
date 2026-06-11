@@ -143,6 +143,8 @@ async function handleCommand(command, params) {
         throw new Error("Missing or invalid nodeIds parameter");
       }
       return await getNodesInfo(params.nodeIds);
+    case "figma_to_code":
+      return await figmaToCodeAdapter.convertFigmaToCode(params);
     case "create_rectangle":
       return await createRectangle(params);
     case "create_frame":

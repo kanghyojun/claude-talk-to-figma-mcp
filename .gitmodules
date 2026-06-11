@@ -1,0 +1,4 @@
+[submodule "FigmaToCode"]
+	path = FigmaToCode
+	url = https://github.com/bernaferrari/FigmaToCode.git
+	branch = main
